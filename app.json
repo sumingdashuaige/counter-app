@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "计数器",
+    "slug": "1",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.counterapp",
+      "permissions": []
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "56403cf9-04ac-47d2-9604-e9d2c2d9c644"
+      }
+    },
+    "owner": "suming6666",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
