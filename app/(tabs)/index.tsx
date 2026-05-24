@@ -40,11 +40,11 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(STORAGE_KEY, value.toString());
   };
 
-  // 长按开始，启动定时器连续 +1
-  const handleLongPressIncrement = () => {
-    // 立刻 +1 一次
+    // 长按开始，启动定时器连续加减
+  const startLongPress = (delta: number) => {
+    // 立刻执行一次
     setCount((prev) => {
-      const newCount = prev + 1;
+      const newCount = prev + delta;
       AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
       return newCount;
     });
@@ -54,10 +54,10 @@ export default function HomeScreen() {
       clearInterval(intervalRef.current);
     }
 
-    // 每 80ms +1
+    // 每 80ms 执行一次
     intervalRef.current = setInterval(() => {
       setCount((prev) => {
-        const newCount = prev + 1;
+        const newCount = prev + delta;
         AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
         return newCount;
       });
@@ -98,10 +98,12 @@ export default function HomeScreen() {
       </Text>
 
       <View style={styles.row}>
-        {/* -1 */}
+                {/* -1 — 支持长按快速减 */}
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: '#5856d6' }]}
           onPress={() => save(count - 1)}
+          onLongPress={() => startLongPress(-1)}
+          onPressOut={handlePressOut}
         >
           <Text style={styles.btnText}>-1</Text>
         </TouchableOpacity>
@@ -110,7 +112,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.btn}
           onPress={() => save(count + 1)}
-          onLongPress={handleLongPressIncrement}
+          onLongPress={() => startLongPress(1)}
           onPressOut={handlePressOut}
         >
           <Text style={styles.btnText}>+1</Text>
