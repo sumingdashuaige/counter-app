@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   SafeAreaView,
   StatusBar,
@@ -19,6 +19,9 @@ export default function HomeScreen() {
   const theme = useColorScheme();
   const isDark = theme === 'dark';
 
+  // 存放 setInterval 的返回值
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
@@ -35,6 +38,38 @@ export default function HomeScreen() {
   const save = async (value: number) => {
     setCount(value);
     await AsyncStorage.setItem(STORAGE_KEY, value.toString());
+  };
+
+  // 长按开始，启动定时器连续 +1
+  const handleLongPressIncrement = () => {
+    // 立刻 +1 一次
+    setCount((prev) => {
+      const newCount = prev + 1;
+      AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
+      return newCount;
+    });
+
+    // 清除残留的旧定时器
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+    }
+
+    // 每 80ms +1
+    intervalRef.current = setInterval(() => {
+      setCount((prev) => {
+        const newCount = prev + 1;
+        AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
+        return newCount;
+      });
+    }, 80);
+  };
+
+  // 松手时停止定时器
+  const handlePressOut = () => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   };
 
   if (loading) {
@@ -63,31 +98,32 @@ export default function HomeScreen() {
       </Text>
 
       <View style={styles.row}>
-  {/* -1 */}
-  <TouchableOpacity
-    style={[styles.btn, { backgroundColor: '#5856d6' }]}
-    onPress={() => save(count - 1)}
-  >
-    <Text style={styles.btnText}>-1</Text>
-  </TouchableOpacity>
+        {/* -1 */}
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: '#5856d6' }]}
+          onPress={() => save(count - 1)}
+        >
+          <Text style={styles.btnText}>-1</Text>
+        </TouchableOpacity>
 
-  {/* +1 */}
-  <TouchableOpacity
-    style={styles.btn}
-    onPress={() => save(count + 1)}
-  >
-    <Text style={styles.btnText}>+1</Text>
-  </TouchableOpacity>
+        {/* +1 — 支持长按快速计数 */}
+        <TouchableOpacity
+          style={styles.btn}
+          onPress={() => save(count + 1)}
+          onLongPress={handleLongPressIncrement}
+          onPressOut={handlePressOut}
+        >
+          <Text style={styles.btnText}>+1</Text>
+        </TouchableOpacity>
 
-  {/* 清零 */}
-  <TouchableOpacity
-    style={[styles.btn, { backgroundColor: '#ff3b30' }]}
-    onPress={() => save(0)}
-  >
-    <Text style={styles.btnText}>清零</Text>
-  </TouchableOpacity>
-</View>
-
+        {/* 清零 */}
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: '#ff3b30' }]}
+          onPress={() => save(0)}
+        >
+          <Text style={styles.btnText}>清零</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
