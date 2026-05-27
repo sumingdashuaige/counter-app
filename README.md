@@ -1,50 +1,64 @@
-# Welcome to your Expo app 👋
+# CounterAppExpo 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+一个基于 **React Native + Expo** 构建的跨平台计数器应用，支持 **iOS / Android / Web** 三端运行。
 
-## Get started
+## 功能特性
 
-1. Install dependencies
+- 🚀 **快速计数** — 短按 +1 / -1，长按连续快速计数（80ms 间隔），松手即停
+- 💾 **数据持久化** — 基于 AsyncStorage 自动保存计数，重启后恢复上次数值
+- 🌓 **深色模式** — 跟随系统主题自动切换亮色 / 暗色 UI
+- 📱 **跨平台** — 一套代码运行于 iOS、Android 和 Web
 
-   ```bash
-   npm install
-   ```
+## 技术栈
 
-2. Start the app
+| 类别 | 技术 |
+|------|------|
+| 框架 | React Native 0.81 + Expo SDK 54 |
+| 语言 | TypeScript |
+| 路由 | Expo Router（文件系统路由）|
+| 导航 | React Navigation (Bottom Tabs) |
+| 持久化 | AsyncStorage |
+| 动画 | React Native Reanimated |
+| 手势 | React Native Gesture Handler |
+| 构建 | EAS Build |
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 快速开始
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
+npx expo start --web
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- `a` — 连接 Android 模拟器
+- `i` — 连接 iOS 模拟器（仅 macOS）
+- `w` — 浏览器直接打开 Web 版
+- 手机安装 **Expo Go** 扫码即可
 
-## Learn more
+## 项目结构
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+.
+├── app/              # Expo Router 页面
+│   ├── (tabs)/       # Tab 导航页面
+│   │   ├── index.tsx # 主页面（计数器逻辑）
+│   │   └── _layout.tsx
+│   ├── modal.tsx     # 模态窗口
+│   └── _layout.tsx   # 根布局
+├── components/       # 可复用组件
+│   └── ui/           # UI 基础组件
+├── hooks/            # 自定义 Hooks
+├── constants/        # 常量与主题配置
+├── assets/           # 静态资源
+└── App.tsx           # （已废弃，由 Expo Router 接管入口）
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 构建发布
 
-## Join the community
+```bash
+npx eas login
+npx eas build --platform android
+npx eas build --platform ios
+```
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+详细构建指南请参考 [EAS_BUILD_GUIDE.md](./EAS_BUILD_GUIDE.md)。
