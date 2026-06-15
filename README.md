@@ -31,9 +31,9 @@ npx expo start --web
 ```
 
 - `a` — 连接 Android 模拟器
-- `i` — 连接 iOS 模拟器（仅 macOS）
+- `i` — 连接 iOS 模拟器（未测试）
 - `w` — 浏览器直接打开 Web 版
-- 手机安装 **Expo Go** 扫码即可
+
 
 ## 项目结构
 
