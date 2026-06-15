@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import {
   SafeAreaView,
   StatusBar,
@@ -12,6 +13,7 @@ import {
 import { useColorScheme } from '../../hooks/use-color-scheme';
 
 const STORAGE_KEY = 'counter_value';
+const HISTORY_KEY = 'counter_history';
 
 export default function HomeScreen() {
   const [count, setCount] = useState(0);
@@ -22,25 +24,43 @@ export default function HomeScreen() {
   // 存放 setInterval 的返回值
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved !== null) {
-          setCount(parseInt(saved, 10));
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const saved = await AsyncStorage.getItem(STORAGE_KEY);
+          if (saved !== null) {
+            setCount(parseInt(saved, 10));
+          }
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+      })();
+    }, [])
+  );
 
   const save = async (value: number) => {
     setCount(value);
     await AsyncStorage.setItem(STORAGE_KEY, value.toString());
   };
 
-    // 长按开始，启动定时器连续加减
+  // 清零并保存历史记录（count 为 0 时不记录）
+  const clearAndRecord = async () => {
+    if (count !== 0) {
+      const raw = await AsyncStorage.getItem(HISTORY_KEY);
+      const history = raw ? JSON.parse(raw) : [];
+      const record = {
+        id: Date.now().toString(),
+        count,
+        time: new Date().toISOString(),
+      };
+      history.push(record);
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+    save(0);
+  };
+
+  // 长按开始，启动定时器连续加减
   const startLongPress = (delta: number) => {
     // 立刻执行一次
     setCount((prev) => {
@@ -121,11 +141,15 @@ export default function HomeScreen() {
         {/* 清零 */}
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: '#ff3b30' }]}
-          onPress={() => save(0)}
+          onPress={clearAndRecord}
         >
-          <Text style={styles.btnText}>清零</Text>
+          <Text style={styles.btnText}>清零/保存</Text>
         </TouchableOpacity>
       </View>
+
+      <Text style={[styles.watermark, { color: isDark ? '#333' : '#ddd' }]}>
+        by：suming
+      </Text>
     </SafeAreaView>
   );
 }
@@ -166,5 +190,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  watermark: {
+    position: 'absolute',
+    bottom: 16,
+    right: 24,
+    fontSize: 12,
   },
 });
