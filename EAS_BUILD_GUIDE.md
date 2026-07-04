@@ -68,7 +68,7 @@ eas --version
 在项目目录中运行：
 
 ```bash
-cd CounterApp
+cd CounterAppExpo
 eas init
 ```
 
@@ -302,7 +302,8 @@ adb install path/to/downloaded.apk
 
 | 文件 | 说明 |
 |------|------|
-| `App.tsx` | 主应用代码（计数器逻辑） |
+| `app/(tabs)/index.tsx` | 主页面（计数器逻辑） |
+| `app/(tabs)/history.tsx` | 历史记录页 |
 | `app.json` | Expo 应用配置 |
 | `eas.json` | EAS Build 配置 |
 | `package.json` | 项目依赖和脚本 |
@@ -315,37 +316,54 @@ adb install path/to/downloaded.apk
 
 ### 数据持久化
 
-应用使用 `AsyncStorage` 将计数值保存到设备本地存储：
+应用使用 `AsyncStorage` 将计数值和历史记录保存到设备本地存储：
 
 ```typescript
-// 从本地存储加载计数值
-const loadCountFromStorage = async () => {
-  const savedCount = await AsyncStorage.getItem(STORAGE_KEY);
-  if (savedCount !== null) {
-    setCount(parseInt(savedCount, 10));
-  }
+// 保存计数值并更新状态
+const save = async (value: number) => {
+  setCount(value);
+  await AsyncStorage.setItem(STORAGE_KEY, value.toString());
 };
 
-// 保存计数值到本地存储
-const saveCountToStorage = async (newCount: number) => {
-  await AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
+// 清零并保存历史记录（count 不为 0 时记录）
+const clearAndRecord = async () => {
+  if (count !== 0) {
+    const raw = await AsyncStorage.getItem(HISTORY_KEY);
+    const history = raw ? JSON.parse(raw) : [];
+    history.push({ id: Date.now().toString(), count, time: new Date().toISOString() });
+    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }
+  save(0);
 };
 ```
 
-### 按钮交互
+### 长按连续计数
+
+通过 `setInterval` 每 80ms 执行一次加减，松手时清除定时器：
 
 ```typescript
-// +1 按钮
-const handleIncrement = async () => {
-  const newCount = count + 1;
-  setCount(newCount);
-  await saveCountToStorage(newCount);
+const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+const startLongPress = (delta: number) => {
+  setCount((prev) => {
+    const newCount = prev + delta;
+    AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
+    return newCount;
+  });
+  intervalRef.current = setInterval(() => {
+    setCount((prev) => {
+      const newCount = prev + delta;
+      AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
+      return newCount;
+    });
+  }, 80);
 };
 
-// 清零按钮
-const handleReset = async () => {
-  setCount(0);
-  await saveCountToStorage(0);
+const handlePressOut = () => {
+  if (intervalRef.current !== null) {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }
 };
 ```
 
@@ -353,7 +371,7 @@ const handleReset = async () => {
 
 ## 下一步
 
-1. **自定义应用**: 修改 `App.tsx` 中的样式或功能
+1. **自定义应用**: 修改 `app/(tabs)/index.tsx` 中的样式或功能
 2. **发布到 Play Store**: 使用签名的发布版 APK 上传到 Google Play Store
 3. **持续更新**: 修改代码后，重新运行构建命令生成新版本
 
