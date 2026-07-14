@@ -1,1 +1,14 @@
-npm version patch --no-git-tag-version && node -e "const a=require('./app.json');a.expo.version=require('./package.json').version;require('fs').writeFileSync('app.json',JSON.stringify(a,null,2))" && git add package.json app.json && git commit -m "chore: v$(node -p "require('./package.json').version")"
+#!/bin/sh
+COMMIT_MSG=$(git log -1 --pretty=%s)
+case "$COMMIT_MSG" in
+  chore\ v*|chore:*) exit 0 ;;
+esac
+case "$COMMIT_MSG" in
+  major:*) TYPE="major" ;;
+  minor:*) TYPE="minor" ;;
+  *) TYPE="patch" ;;
+esac
+npm version $TYPE --no-git-tag-version
+node scripts/sync-version.js
+git add package.json app.json
+git commit -m "chore: v$(node -p "require('./package.json').version")"
