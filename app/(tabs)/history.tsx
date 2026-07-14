@@ -17,6 +17,7 @@ const HISTORY_KEY = 'counter_history';
 
 type Record = {
   id: string;
+  title: string;
   count: number;
   time: string;
 };
@@ -52,6 +53,7 @@ export default function HistoryScreen() {
 
   const restoreRecord = async (record: Record) => {
     await AsyncStorage.setItem('counter_value', record.count.toString());
+    await AsyncStorage.setItem('counter_title', record.title || '计数器');
     deleteRecord(record.id);
     router.navigate('/(tabs)');
   };
@@ -75,7 +77,7 @@ export default function HistoryScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <Text style={[styles.title, { color: text }]}>历史记录</Text>
+      <Text style={[styles.title, { color: text , textAlign: 'center' }]}>历史记录</Text>
 
       <View style={[styles.warning, { backgroundColor: isDark ? '#332900' : '#fff3cd' }]}>
         <Text style={[styles.warningText, { color: isDark ? '#ffd60a' : '#856404' }]}>
@@ -96,7 +98,7 @@ export default function HistoryScreen() {
             <View style={[styles.card, { backgroundColor: cardBg }]}>
               <View style={styles.cardInfo}>
                 <Text style={[styles.cardCount, { color: text }]}>
-                  计数: {item.count}
+                  {item.title || '未命名'}：{item.count}
                 </Text>
                 <Text style={[styles.cardTime, { color: subText }]}>
                   {formatTime(item.time)}

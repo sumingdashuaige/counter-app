@@ -6,6 +6,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,11 +15,14 @@ import { useColorScheme } from '../../hooks/use-color-scheme';
 
 const STORAGE_KEY = 'counter_value';
 const HISTORY_KEY = 'counter_history';
+const TITLE_KEY = 'counter_title';
 
 export default function HomeScreen() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const theme = useColorScheme();
+  const [title, setTitle] = useState('计数器');
+  const [editing, setEditing] = useState(false);
   const isDark = theme === 'dark';
 
   // 存放 setInterval 的返回值
@@ -31,6 +35,11 @@ export default function HomeScreen() {
           const saved = await AsyncStorage.getItem(STORAGE_KEY);
           if (saved !== null) {
             setCount(parseInt(saved, 10));
+          }
+
+          const savedTitle = await AsyncStorage.getItem(TITLE_KEY);
+          if (savedTitle !== null) {
+            setTitle(savedTitle);
           }
         } finally {
           setLoading(false);
@@ -52,6 +61,7 @@ export default function HomeScreen() {
       const record = {
         id: Date.now().toString(),
         count,
+        title,
         time: new Date().toISOString(),
       };
       history.push(record);
@@ -109,9 +119,25 @@ export default function HomeScreen() {
     >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
-        计数器
-      </Text>
+      {editing ? (
+  <TextInput
+    style={[styles.title, { color: isDark ? '#fff' : '#000' }]}
+    value={title}
+    onChangeText={setTitle}
+    onBlur={() => {
+      AsyncStorage.setItem(TITLE_KEY, title);
+      setEditing(false);
+    }}
+    autoFocus
+  />
+) : (
+  <Text
+    style={[styles.title, { color: isDark ? '#fff' : '#000' }]}
+    onPress={() => setEditing(true)}
+  >
+    {title}
+  </Text>
+)}
 
       <Text style={[styles.count, { color: isDark ? '#fff' : '#000' }]}>
         {count}
