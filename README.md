@@ -68,7 +68,6 @@ npx expo start --web
 ```
 
 - `a` — 连接 Android 模拟器
-- `i` — 连接 iOS 模拟器（未测试）
 - `w` — 浏览器直接打开 Web 版
 
 ## 项目结构
