@@ -19,4 +19,4 @@ CHANGELOG.md
 *.tar.gz
 *.log
 dist/
-memory
+memory/
