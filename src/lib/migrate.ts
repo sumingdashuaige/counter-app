@@ -10,7 +10,7 @@ interface LegacyRecord {
 
 /**
  * 首次启动迁移旧版三个 key → counters_v2。
- * 返回 null 表示无旧数据。旧历史中 title 与计数器名一致的记录并入该计数器。
+ * 返回 null 表示无旧数据。v1 是单计数器应用，全部历史记录直接并入该计数器（不做 title 过滤）。
  */
 export function migrateLegacy(
   legacyValue: string | null,
@@ -37,7 +37,7 @@ export function migrateLegacy(
       const parsed = JSON.parse(legacyHistory) as LegacyRecord[];
       if (Array.isArray(parsed)) {
         counter.history = parsed
-          .filter((r) => r.title === name && typeof r.count === 'number' && typeof r.time === 'string')
+          .filter((r) => typeof r.count === 'number' && typeof r.time === 'string')
           .map((r): ClearRecord => ({ id: r.id || newId(), count: r.count as number, time: r.time as string }));
       }
     } catch {

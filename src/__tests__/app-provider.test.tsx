@@ -42,7 +42,7 @@ test('迁移：有旧版三个 key 时生成计数器并保留旧 key', async ()
   const { getByText } = await renderApp();
 
   await waitFor(() => {
-    getByText('[{"name":"我的计数","value":42,"history":1}]');
+    getByText('[{"name":"我的计数","value":42,"history":2}]');
   });
 
   // counters_v2 已写入

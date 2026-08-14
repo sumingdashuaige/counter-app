@@ -17,14 +17,15 @@ test('defaults title to 计数器', () => {
   expect(result.counters[0].name).toBe('计数器');
 });
 
-test('migrates legacy history records with title match', () => {
+test('migrates ALL legacy history records regardless of title', () => {
   const legacyHistory = JSON.stringify([
     { id: 'h1', title: '我的计数', count: 9, time: '2026-01-01T00:00:00Z' },
     { id: 'h2', title: '另一个', count: 5, time: '2026-01-02T00:00:00Z' },
   ]);
   const result = migrateLegacy('42', '我的计数', legacyHistory)!;
-  expect(result.counters[0].history).toHaveLength(1);
+  expect(result.counters[0].history).toHaveLength(2);
   expect(result.counters[0].history[0].count).toBe(9);
+  expect(result.counters[0].history[1].count).toBe(5);
   expect(result.counters[0].history[0].id).toBe('h1');
 });
 
