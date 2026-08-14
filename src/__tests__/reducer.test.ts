@@ -36,6 +36,8 @@ test('setStep validates positive number', () => {
   const next = countersReducer(s, { type: 'setStep', id: 'c1', step: 5 });
   expect(next.counters[0].step).toBe(5);
   expect(() => countersReducer(s, { type: 'setStep', id: 'c1', step: 0 })).toThrow();
+  expect(() => countersReducer(s, { type: 'setStep', id: 'c1', step: Infinity })).toThrow();
+  expect(() => countersReducer(s, { type: 'setStep', id: 'c1', step: NaN })).toThrow();
 });
 
 test('addCounter prepends new counter', () => {
@@ -113,4 +115,23 @@ test('importMerge merges by id, new ids get fresh id', () => {
   expect(next.counters.find((c) => c.id === 'c1')!.value).toBe(99);
   const merged = next.counters.find((c) => c.name === 'New')!;
   expect(merged.id).not.toBe('c2');
+});
+
+test('importMerge preserves incoming order for new counters', () => {
+  const s = { counters: [base()] };
+  const next = countersReducer(s, {
+    type: 'importMerge',
+    counters: [
+      base({ id: 'x1', name: 'First' }),
+      base({ id: 'x2', name: 'Second' }),
+    ],
+  });
+  const names = next.counters.map((c) => c.name);
+  expect(names).toEqual(['First', 'Second', 'A']);
+});
+
+test('updateValue on missing id returns same state reference', () => {
+  const s = { counters: [base()] };
+  const next = countersReducer(s, { type: 'updateValue', id: 'missing', delta: 5 });
+  expect(next).toBe(s);
 });

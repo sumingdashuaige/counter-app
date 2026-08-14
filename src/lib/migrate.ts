@@ -21,10 +21,11 @@ export function migrateLegacy(
 
   const name = legacyTitle || '计数器';
   const now = Date.now();
+  const legacyCount = legacyValue !== null ? Number(legacyValue) : NaN;
   const counter: Counter = {
     id: newId(),
     name,
-    value: legacyValue !== null ? Number(legacyValue) || 0 : 0,
+    value: Number.isFinite(legacyCount) ? legacyCount : 0,
     step: 1,
     createdAt: now,
     lastUsedAt: now,

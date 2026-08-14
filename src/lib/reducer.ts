@@ -28,6 +28,7 @@ export type Action =
   | { type: 'importMerge'; counters: Counter[] };
 
 function patchCounter(state: CountersState, id: string, fn: (c: Counter) => Counter): CountersState {
+  if (!state.counters.some((c) => c.id === id)) return state;
   return {
     counters: state.counters.map((c) => (c.id === id ? fn(c) : c)),
   };
@@ -44,7 +45,7 @@ export function countersReducer(state: CountersState, action: Action): CountersS
       return patchCounter(state, action.id, (c) => touch({ ...c, value: c.value + action.delta }));
     }
     case 'setStep': {
-      if (!(action.step > 0)) throw new Error('step must be positive');
+      if (!Number.isFinite(action.step) || action.step <= 0) throw new Error('step must be positive');
       return patchCounter(state, action.id, (c) => ({ ...c, step: action.step }));
     }
     case 'addCounter':
@@ -79,14 +80,16 @@ export function countersReducer(state: CountersState, action: Action): CountersS
       return { counters: [...action.counters] };
     case 'importMerge': {
       const merged = [...state.counters];
+      const fresh: Counter[] = [];
       for (const incoming of action.counters) {
         const idx = merged.findIndex((c) => c.id === incoming.id);
         if (idx >= 0) {
           merged[idx] = incoming;
         } else {
-          merged.unshift({ ...incoming, id: newId() });
+          fresh.push({ ...incoming, id: newId() });
         }
       }
+      merged.unshift(...fresh);
       return { counters: merged };
     }
   }
