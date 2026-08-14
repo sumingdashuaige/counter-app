@@ -22,6 +22,8 @@ export default function CounterScreen() {
   const [customStepText, setCustomStepText] = useState('');
   const [addNumberVisible, setAddNumberVisible] = useState(false);
   const [addNumberText, setAddNumberText] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameText, setNameText] = useState('');
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useSharedValue(1);
@@ -81,12 +83,42 @@ export default function CounterScreen() {
 
   useEffect(() => stopRepeat, [stopRepeat]);
 
+  // 点击标题进入编辑态（预填当前名称）
+  const startEditName = useCallback(() => {
+    if (!counter) return;
+    setNameText(counter.name);
+    setEditingName(true);
+  }, [counter]);
+
+  // 失焦/提交时保存重命名并退出编辑态（空名称不保存）
+  const commitRename = useCallback(() => {
+    const n = nameText.trim();
+    if (n && counter && n !== counter.name) {
+      dispatch({ type: 'renameCounter', id: counter.id, name: n });
+    }
+    setEditingName(false);
+  }, [nameText, counter, dispatch]);
+
+  // 清零直接执行并记入历史，不再二次确认
   const onClear = useCallback(() => {
     if (!counter || counter.value === 0) return;
-    confirmDialog('清零', `确定清零（当前 ${counter.value}）？将记入历史。`, '清零', true, () =>
-      dispatch({ type: 'clearWithRecord', id: counter.id })
-    );
+    dispatch({ type: 'clearWithRecord', id: counter.id });
   }, [counter, dispatch]);
+
+  // 删除计数器（二次确认，历史一并删除）
+  const onDelete = useCallback(() => {
+    if (!counter) return;
+    confirmDialog(
+      '删除计数器',
+      `确定删除「${counter.name}」？该计数器的历史记录也会删除`,
+      '删除',
+      true,
+      () => {
+        dispatch({ type: 'removeCounter', id: counter.id });
+        router.back();
+      }
+    );
+  }, [counter, dispatch, router]);
 
   const confirmCustomStep = useCallback(() => {
     const n = Number(customStepText);
@@ -129,14 +161,33 @@ export default function CounterScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={[styles.backText, { color: text }]}>‹ 返回</Text>
         </TouchableOpacity>
-        <Text style={[styles.name, { color: sub }]} numberOfLines={1}>{counter.name}</Text>
+        {editingName ? (
+          <TextInput
+            style={[styles.nameInput, { color: text }]}
+            value={nameText}
+            onChangeText={setNameText}
+            autoFocus
+            onBlur={commitRename}
+            onSubmitEditing={commitRename}
+            returnKeyType="done"
+          />
+        ) : (
+          <TouchableOpacity style={styles.nameBtn} onPress={startEditName} activeOpacity={0.7}>
+            <Text style={[styles.name, { color: text }]} numberOfLines={1}>{counter.name}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={() => router.push(`/history?cid=${counter.id}`)} style={styles.backBtn}>
           <Text style={[styles.backText, { color: text }]}>历史</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.display}>
-        <Animated.Text style={[styles.value, { color: text, fontVariant: ['tabular-nums'] }, animStyle]}>
+        <Animated.Text
+          style={[styles.value, { color: text, fontVariant: ['tabular-nums'] }, animStyle]}
+          adjustsFontSizeToFit
+          minimumFontScale={0.15}
+          numberOfLines={1}
+        >
           {counter.value}
         </Animated.Text>
       </View>
@@ -183,9 +234,16 @@ export default function CounterScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.clearBtn} onPress={onClear} activeOpacity={0.7}>
-        <Text style={styles.clearText}>清零</Text>
-      </TouchableOpacity>
+      <View style={styles.dangerRow}>
+        <TouchableOpacity style={styles.clearBtn} onPress={onClear} activeOpacity={0.7}>
+          <Text style={styles.clearText}>清零并保存</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
+          <Text style={styles.deleteText}>删除</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[styles.watermark, { color: isDark ? '#333' : '#ddd' }]}>by：suming</Text>
 
       {/* 自定义步长弹窗 */}
       <Modal visible={customStepVisible} transparent animationType="fade" onRequestClose={() => setCustomStepVisible(false)}>
@@ -249,7 +307,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
   backBtn: { paddingVertical: 8, paddingHorizontal: 4 },
   backText: { fontSize: 16 },
-  name: { fontSize: 16, fontWeight: '600', flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  nameBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', marginHorizontal: 8 },
+  name: { fontSize: 22, fontWeight: '600', textAlign: 'center' },
+  nameInput: { flex: 1, fontSize: 22, fontWeight: '600', textAlign: 'center', marginHorizontal: 8, paddingVertical: 0 },
   display: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   value: { fontSize: 140, fontWeight: 'bold' },
   bigRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 24, marginBottom: 24 },
@@ -261,8 +321,12 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 15, fontWeight: '600' },
   addChip: { backgroundColor: '#007aff' },
   addChipText: { fontSize: 15, fontWeight: '600', color: '#fff' },
-  clearBtn: { alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 48, borderRadius: 12, marginBottom: 32, backgroundColor: '#ff3b30' },
+  dangerRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 32 },
+  clearBtn: { paddingVertical: 12, paddingHorizontal: 40, borderRadius: 12, backgroundColor: '#ff3b30' },
   clearText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  deleteBtn: { paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12, borderWidth: 1, borderColor: '#ff3b30' },
+  deleteText: { color: '#ff3b30', fontSize: 16, fontWeight: 'bold' },
+  watermark: { position: 'absolute', bottom: 16, right: 24, fontSize: 12 },
   link: { color: '#007aff', fontSize: 16, marginTop: 12 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 32 },
   modalBox: { borderRadius: 16, padding: 20 },

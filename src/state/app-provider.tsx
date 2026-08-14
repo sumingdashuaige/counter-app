@@ -3,7 +3,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useReducer, useRef, useStat
 import { AppState as RNAppState, useColorScheme } from 'react-native';
 
 import { isCounter } from '../lib/io';
-import { countersReducer } from '../lib/reducer';
+import { countersReducer, createCounter } from '../lib/reducer';
 import { migrateLegacy } from '../lib/migrate';
 import { resolveIsDark } from '../lib/theme';
 import { STORAGE_KEY, THEME_KEY, LEGACY_VALUE_KEY, LEGACY_TITLE_KEY, LEGACY_HISTORY_KEY, ThemeMode } from '../lib/types';
@@ -53,8 +53,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } else {
           const migrated = migrateLegacy(legacyValue, legacyTitle, legacyHistory);
+          // 无旧数据时也创建一个默认计数器，避免新用户看到空页面
+          dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
           if (migrated) {
-            dispatch({ type: 'importReplace', counters: migrated.counters });
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
             await AsyncStorage.multiRemove([LEGACY_VALUE_KEY, LEGACY_TITLE_KEY, LEGACY_HISTORY_KEY]);
           }

@@ -7,10 +7,11 @@ interface Props {
   isDark: boolean;
   onPress: (id: string) => void;
   onLongPress: (id: string) => void;
+  onMenu: (id: string) => void;
   onDelta: (id: string, delta: number) => void;
 }
 
-function CounterCardBase({ counter, isDark, onPress, onLongPress, onDelta }: Props) {
+function CounterCardBase({ counter, isDark, onPress, onLongPress, onMenu, onDelta }: Props) {
   const cardBg = isDark ? '#1c1c1e' : '#f2f2f7';
   const text = isDark ? '#fff' : '#000';
   const sub = isDark ? '#8e8e93' : '#6e6e73';
@@ -24,10 +25,25 @@ function CounterCardBase({ counter, isDark, onPress, onLongPress, onDelta }: Pro
         delayLongPress={350}
         activeOpacity={0.7}
       >
-        <Text style={[styles.name, { color: sub }]} numberOfLines={1}>
-          {counter.name}
-        </Text>
-        <Text style={[styles.value, { color: text, fontVariant: ['tabular-nums'] }]}>
+        <View style={styles.nameRow}>
+          <Text style={[styles.name, { color: sub }]} numberOfLines={1}>
+            {counter.name}
+          </Text>
+          <TouchableOpacity
+            style={styles.moreBtn}
+            onPress={() => onMenu(counter.id)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.moreText, { color: sub }]}>⋯</Text>
+          </TouchableOpacity>
+        </View>
+        <Text
+          style={[styles.value, { color: text, fontVariant: ['tabular-nums'] }]}
+          adjustsFontSizeToFit
+          minimumFontScale={0.35}
+          numberOfLines={1}
+        >
           {counter.value}
         </Text>
       </TouchableOpacity>
@@ -56,9 +72,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   name: {
     fontSize: 13,
-    marginBottom: 6,
+    flex: 1,
+  },
+  moreBtn: {
+    padding: 2,
+    marginLeft: 6,
+  },
+  moreText: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   value: {
     fontSize: 40,

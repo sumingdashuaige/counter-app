@@ -114,6 +114,7 @@ export default function HomeScreen() {
               isDark={isDark}
               onPress={openCounter}
               onLongPress={onLongPress}
+              onMenu={onLongPress}
               onDelta={onDelta}
             />
           )}
@@ -129,6 +130,8 @@ export default function HomeScreen() {
         onCancel={() => setModal(null)}
         onConfirm={handleConfirm}
       />
+
+      <Text style={[styles.watermark, { color: isDark ? '#333' : '#ddd' }]}>by：suming</Text>
     </SafeAreaView>
   );
 }
@@ -154,4 +157,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 15 },
   list: { padding: 6, paddingBottom: 24 },
+  watermark: {
+    position: 'absolute',
+    bottom: 16,
+    right: 24,
+    fontSize: 12,
+  },
 });
