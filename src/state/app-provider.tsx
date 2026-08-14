@@ -56,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
             if (migrated) {
               await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
-              await AsyncStorage.multiRemove([LEGACY_VALUE_KEY, LEGACY_TITLE_KEY, LEGACY_HISTORY_KEY]);
+              // 刻意保留旧 key：迁移失败时可再次迁移或手动恢复（数据量极小，无碍）
             }
           }
         } else {
@@ -65,7 +65,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
           if (migrated) {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
-            await AsyncStorage.multiRemove([LEGACY_VALUE_KEY, LEGACY_TITLE_KEY, LEGACY_HISTORY_KEY]);
+            // 刻意保留旧 key：迁移失败时可再次迁移或手动恢复（数据量极小，无碍）
           }
         }
       } finally {
