@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { CounterCard } from '../../src/components/counter-card';
 import { NewCounterModal } from '../../src/components/new-counter-modal';
+import { confirmDialog, showMenu } from '../../src/lib/dialogs';
 import { createCounter } from '../../src/lib/reducer';
 import { useApp } from '../../src/state/app-context';
 
@@ -15,6 +16,14 @@ type ModalState =
 export default function HomeScreen() {
   const { counters, loading, isDark, dispatch } = useApp();
   const [modal, setModal] = useState<ModalState>(null);
+  const { width } = useWindowDimensions();
+
+  // 列数自适应：<360 一列，360–700 两列，>700 三列
+  const numColumns = width < 360 ? 1 : width > 700 ? 3 : 2;
+
+  // 最新 counters 存 ref，让 onLongPress 回调引用稳定（空依赖），避免 memo 卡片全量重渲染
+  const countersRef = useRef(counters);
+  countersRef.current = counters;
 
   // 最近使用置顶（lastUsedAt 降序）
   const sorted = useMemo(
@@ -35,34 +44,25 @@ export default function HomeScreen() {
     [dispatch]
   );
 
-  // 长按菜单：重命名 / 复制 / 删除（删除二次确认）
+  // 长按菜单：重命名 / 复制 / 删除（删除二次确认，web 端用 window.confirm）
   const onLongPress = useCallback(
     (id: string) => {
-      const c = counters.find((x) => x.id === id);
+      const c = countersRef.current.find((x) => x.id === id);
       if (!c) return;
-      Alert.alert(c.name, '选择操作', [
+      showMenu(c.name, [
+        { label: '重命名', onPress: () => setModal({ kind: 'edit', id: c.id, name: c.name }) },
+        { label: '复制', onPress: () => dispatch({ type: 'duplicateCounter', id }) },
         {
-          text: '重命名',
-          onPress: () => setModal({ kind: 'edit', id: c.id, name: c.name }),
-        },
-        { text: '复制', onPress: () => dispatch({ type: 'duplicateCounter', id }) },
-        {
-          text: '删除',
-          style: 'destructive',
+          label: '删除',
+          destructive: true,
           onPress: () =>
-            Alert.alert('删除计数器', `确定删除「${c.name}」？此操作不可恢复。`, [
-              { text: '取消', style: 'cancel' },
-              {
-                text: '删除',
-                style: 'destructive',
-                onPress: () => dispatch({ type: 'removeCounter', id }),
-              },
-            ]),
+            confirmDialog('删除计数器', `确定删除「${c.name}」？此操作不可恢复。`, '删除', true, () =>
+              dispatch({ type: 'removeCounter', id })
+            ),
         },
-        { text: '取消', style: 'cancel' },
       ]);
     },
-    [counters, dispatch]
+    [dispatch]
   );
 
   const handleConfirm = useCallback(
@@ -104,9 +104,10 @@ export default function HomeScreen() {
         </View>
       ) : (
         <FlatList
+          key={numColumns}
           data={sorted}
           keyExtractor={(item) => item.id}
-          numColumns={2}
+          numColumns={numColumns}
           renderItem={({ item }) => (
             <CounterCard
               counter={item}

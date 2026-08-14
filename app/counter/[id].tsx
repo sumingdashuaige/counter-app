@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert, Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Modal, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
+import { confirmDialog } from '../../src/lib/dialogs';
 import { useApp } from '../../src/state/app-context';
 
 const STEPS = [1, 2, 5, 10];
@@ -82,10 +83,9 @@ export default function CounterScreen() {
 
   const onClear = useCallback(() => {
     if (!counter || counter.value === 0) return;
-    Alert.alert('清零', `确定清零（当前 ${counter.value}）？将记入历史。`, [
-      { text: '取消', style: 'cancel' },
-      { text: '清零', style: 'destructive', onPress: () => dispatch({ type: 'clearWithRecord', id: counter.id }) },
-    ]);
+    confirmDialog('清零', `确定清零（当前 ${counter.value}）？将记入历史。`, '清零', true, () =>
+      dispatch({ type: 'clearWithRecord', id: counter.id })
+    );
   }, [counter, dispatch]);
 
   const confirmCustomStep = useCallback(() => {
@@ -223,7 +223,7 @@ export default function CounterScreen() {
               style={[styles.modalInput, { color: text, borderColor: isDark ? '#3a3a3c' : '#c7c7cc' }]}
               value={addNumberText}
               onChangeText={setAddNumberText}
-              keyboardType="numbers-and-punctuation"
+              keyboardType={Platform.OS === 'android' ? 'default' : 'numbers-and-punctuation'}
               placeholder="输入数字，负数表示减"
               placeholderTextColor={sub}
               autoFocus

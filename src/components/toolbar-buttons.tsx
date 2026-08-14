@@ -1,5 +1,6 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { showAlert, showMenu } from '../lib/dialogs';
 import { serializeExport } from '../lib/io';
 import { parseExportFile } from '../lib/io';
 import { exportJsonToFile, pickJsonFile } from '../lib/platform-io';
@@ -19,7 +20,7 @@ export function ToolbarButtons() {
     try {
       await exportJsonToFile(filename, serializeExport(counters));
     } catch (e) {
-      Alert.alert('导出失败', String(e));
+      showAlert('导出失败', String(e));
     }
   };
 
@@ -29,16 +30,19 @@ export function ToolbarButtons() {
       if (text === null) return;
       const parsed = parseExportFile(text);
       if (!parsed) {
-        Alert.alert('导入失败', '文件格式不正确');
+        showAlert('导入失败', '文件格式不正确');
         return;
       }
-      Alert.alert('导入方式', `共 ${parsed.counters.length} 个计数器`, [
-        { text: '取消', style: 'cancel' },
-        { text: '合并', onPress: () => dispatch({ type: 'importMerge', counters: parsed.counters }) },
-        { text: '替换', style: 'destructive', onPress: () => dispatch({ type: 'importReplace', counters: parsed.counters }) },
+      showMenu(`导入方式（共 ${parsed.counters.length} 个计数器）`, [
+        { label: '合并', onPress: () => dispatch({ type: 'importMerge', counters: parsed.counters }) },
+        {
+          label: '替换',
+          destructive: true,
+          onPress: () => dispatch({ type: 'importReplace', counters: parsed.counters }),
+        },
       ]);
     } catch (e) {
-      Alert.alert('导入失败', String(e));
+      showAlert('导入失败', String(e));
     }
   };
 
