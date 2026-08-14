@@ -19,10 +19,10 @@ function RootNavigator() {
   const initialPathRef = useRef(pathname);
   const restoredRef = useRef(false);
 
-  // 记录当前页面：退出/关闭后重启可回到上次位置（首页 '/' 是默认，不记）
+  // 记录当前页面：退出/关闭后重启可回到上次位置（首页 '/' 也记录，覆盖旧记录）
   useEffect(() => {
     if (loading) return;
-    if (pathname && pathname !== '/') {
+    if (pathname) {
       AsyncStorage.setItem(LAST_ROUTE_KEY, pathname).catch(() => {});
     }
   }, [pathname, loading]);
@@ -35,7 +35,8 @@ function RootNavigator() {
       const last = await AsyncStorage.getItem(LAST_ROUTE_KEY);
       const target = resolveRestoreRoute(last, initialPathRef.current, counters.map((c) => c.id));
       if (target && target !== pathname) {
-        router.replace(target as never);
+        // push 而非 replace：保留返回栈，全屏页能正常返回首页
+        router.push(target as never);
       }
     })();
   }, [loading, counters, pathname]);
