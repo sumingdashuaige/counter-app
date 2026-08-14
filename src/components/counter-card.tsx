@@ -26,7 +26,7 @@ function CounterCardBase({ counter, isDark, onPress, onLongPress, onMenu, onDelt
         activeOpacity={0.7}
       >
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: sub }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: text }]} numberOfLines={1}>
             {counter.name}
           </Text>
           <TouchableOpacity
@@ -78,7 +78,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   name: {
-    fontSize: 13,
+    fontSize: 22,
+    fontWeight: '700',
     flex: 1,
   },
   moreBtn: {

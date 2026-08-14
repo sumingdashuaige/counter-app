@@ -39,14 +39,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (Array.isArray(parsed)) {
               // 逐项校验，过滤非法条目
               const valid = parsed.filter(isCounter);
-              dispatch({ type: 'importReplace', counters: valid });
+              if (valid.length > 0) {
+                dispatch({ type: 'importReplace', counters: valid });
+              } else {
+                // 空数组（或过滤后为空）：也创建默认计数器（覆盖旧构建写入的空数组）
+                dispatch({ type: 'importReplace', counters: [createCounter('计数器')] });
+              }
+            } else {
+              // 非数组数据：走默认计数器
+              dispatch({ type: 'importReplace', counters: [createCounter('计数器')] });
             }
           } catch {
-            // 数据损坏：清掉损坏的 key，再尝试迁移旧数据；迁移失败则保持空状态
+            // 数据损坏：清掉损坏的 key，再尝试迁移旧数据；迁移失败则创建默认计数器
             await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
             const migrated = migrateLegacy(legacyValue, legacyTitle, legacyHistory);
+            dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
             if (migrated) {
-              dispatch({ type: 'importReplace', counters: migrated.counters });
               await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
               await AsyncStorage.multiRemove([LEGACY_VALUE_KEY, LEGACY_TITLE_KEY, LEGACY_HISTORY_KEY]);
             }

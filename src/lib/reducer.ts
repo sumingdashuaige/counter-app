@@ -25,7 +25,9 @@ export type Action =
   | { type: 'removeRecord'; id: string; recordId: string }
   | { type: 'restoreRecord'; id: string; recordId: string }
   | { type: 'importReplace'; counters: Counter[] }
-  | { type: 'importMerge'; counters: Counter[] };
+  | { type: 'importMerge'; counters: Counter[] }
+  | { type: 'reorder'; orderedIds: string[] }
+  | { type: 'moveCounter'; id: string; direction: 'up' | 'down' };
 
 function patchCounter(state: CountersState, id: string, fn: (c: Counter) => Counter): CountersState {
   if (!state.counters.some((c) => c.id === id)) return state;
@@ -91,6 +93,26 @@ export function countersReducer(state: CountersState, action: Action): CountersS
       }
       merged.unshift(...fresh);
       return { counters: merged };
+    }
+    case 'reorder': {
+      // 手动排序：orderedIds 决定新顺序；缺失任何 id 则视为非法输入，保持原顺序
+      const byId = new Map(state.counters.map((c) => [c.id, c]));
+      const next = action.orderedIds
+        .map((id) => byId.get(id))
+        .filter((c): c is Counter => c !== undefined);
+      if (next.length === state.counters.length) return { counters: next };
+      return state;
+    }
+    case 'moveCounter': {
+      // 上移/下移：边界处（已在首位/末位）或 id 不存在时保持不变
+      const idx = state.counters.findIndex((c) => c.id === action.id);
+      if (idx < 0) return state;
+      const target = action.direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= state.counters.length) return state;
+      const next = [...state.counters];
+      const [item] = next.splice(idx, 1);
+      next.splice(target, 0, item);
+      return { counters: next };
     }
   }
 }

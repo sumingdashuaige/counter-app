@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { CounterCard } from '../../src/components/counter-card';
 import { NewCounterModal } from '../../src/components/new-counter-modal';
-import { confirmDialog, showMenu } from '../../src/lib/dialogs';
+import { confirmDialog, MenuItem, showMenu } from '../../src/lib/dialogs';
 import { createCounter } from '../../src/lib/reducer';
 import { useApp } from '../../src/state/app-context';
 
@@ -25,12 +25,6 @@ export default function HomeScreen() {
   const countersRef = useRef(counters);
   countersRef.current = counters;
 
-  // 最近使用置顶（lastUsedAt 降序）
-  const sorted = useMemo(
-    () => [...counters].sort((a, b) => b.lastUsedAt - a.lastUsedAt),
-    [counters]
-  );
-
   const isEdit = modal !== null && modal.kind === 'edit';
 
   const openCounter = useCallback((id: string) => {
@@ -44,23 +38,27 @@ export default function HomeScreen() {
     [dispatch]
   );
 
-  // 长按菜单：重命名 / 复制 / 删除（删除二次确认，web 端用 window.confirm）
+  // 长按 / ⋯ 菜单：上移 / 下移 / 重命名 / 复制 / 删除（手动排序；删除二次确认，web 端用 window.confirm）
   const onLongPress = useCallback(
     (id: string) => {
-      const c = countersRef.current.find((x) => x.id === id);
-      if (!c) return;
-      showMenu(c.name, [
-        { label: '重命名', onPress: () => setModal({ kind: 'edit', id: c.id, name: c.name }) },
-        { label: '复制', onPress: () => dispatch({ type: 'duplicateCounter', id }) },
-        {
-          label: '删除',
-          destructive: true,
-          onPress: () =>
-            confirmDialog('删除计数器', `确定删除「${c.name}」？此操作不可恢复。`, '删除', true, () =>
-              dispatch({ type: 'removeCounter', id })
-            ),
-        },
-      ]);
+      const list = countersRef.current;
+      const idx = list.findIndex((x) => x.id === id);
+      if (idx < 0) return;
+      const c = list[idx];
+      const items: MenuItem[] = [];
+      if (idx > 0) items.push({ label: '上移', onPress: () => dispatch({ type: 'moveCounter', id, direction: 'up' }) });
+      if (idx < list.length - 1) items.push({ label: '下移', onPress: () => dispatch({ type: 'moveCounter', id, direction: 'down' }) });
+      items.push({ label: '重命名', onPress: () => setModal({ kind: 'edit', id: c.id, name: c.name }) });
+      items.push({ label: '复制', onPress: () => dispatch({ type: 'duplicateCounter', id }) });
+      items.push({
+        label: '删除',
+        destructive: true,
+        onPress: () =>
+          confirmDialog('删除计数器', `确定删除「${c.name}」？此操作不可恢复。`, '删除', true, () =>
+            dispatch({ type: 'removeCounter', id })
+          ),
+      });
+      showMenu(c.name, items);
     },
     [dispatch]
   );
@@ -96,7 +94,7 @@ export default function HomeScreen() {
         <View style={styles.center}>
           <Text style={{ color: text }}>加载中…</Text>
         </View>
-      ) : sorted.length === 0 ? (
+      ) : counters.length === 0 ? (
         <View style={styles.center}>
           <Text style={[styles.emptyText, { color: isDark ? '#8e8e93' : '#aeaeb2' }]}>
             还没有计数器，点右上角"新建"开始
@@ -105,7 +103,7 @@ export default function HomeScreen() {
       ) : (
         <FlatList
           key={numColumns}
-          data={sorted}
+          data={counters}
           keyExtractor={(item) => item.id}
           numColumns={numColumns}
           renderItem={({ item }) => (

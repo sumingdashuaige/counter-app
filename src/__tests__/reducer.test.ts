@@ -135,3 +135,39 @@ test('updateValue on missing id returns same state reference', () => {
   const next = countersReducer(s, { type: 'updateValue', id: 'missing', delta: 5 });
   expect(next).toBe(s);
 });
+
+test('reorder arranges counters by orderedIds', () => {
+  const s = { counters: [base(), base({ id: 'c2', name: 'B' }), base({ id: 'c3', name: 'C' })] };
+  const next = countersReducer(s, { type: 'reorder', orderedIds: ['c3', 'c1', 'c2'] });
+  expect(next.counters.map((c) => c.id)).toEqual(['c3', 'c1', 'c2']);
+});
+
+test('reorder with missing id returns same state reference', () => {
+  const s = { counters: [base(), base({ id: 'c2', name: 'B' })] };
+  const next = countersReducer(s, { type: 'reorder', orderedIds: ['c1', 'ghost'] });
+  expect(next).toBe(s);
+});
+
+test('moveCounter moves item up', () => {
+  const s = { counters: [base(), base({ id: 'c2', name: 'B' }), base({ id: 'c3', name: 'C' })] };
+  const next = countersReducer(s, { type: 'moveCounter', id: 'c2', direction: 'up' });
+  expect(next.counters.map((c) => c.id)).toEqual(['c2', 'c1', 'c3']);
+});
+
+test('moveCounter moves item down', () => {
+  const s = { counters: [base(), base({ id: 'c2', name: 'B' }), base({ id: 'c3', name: 'C' })] };
+  const next = countersReducer(s, { type: 'moveCounter', id: 'c1', direction: 'down' });
+  expect(next.counters.map((c) => c.id)).toEqual(['c2', 'c1', 'c3']);
+});
+
+test('moveCounter at boundary returns same state reference', () => {
+  const s = { counters: [base(), base({ id: 'c2', name: 'B' })] };
+  expect(countersReducer(s, { type: 'moveCounter', id: 'c1', direction: 'up' })).toBe(s);
+  expect(countersReducer(s, { type: 'moveCounter', id: 'c2', direction: 'down' })).toBe(s);
+});
+
+test('moveCounter on missing id returns same state reference', () => {
+  const s = { counters: [base()] };
+  const next = countersReducer(s, { type: 'moveCounter', id: 'ghost', direction: 'up' });
+  expect(next).toBe(s);
+});
