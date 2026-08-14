@@ -106,6 +106,5 @@ cd dist && python3 serve.py 8080   # 带 SPA fallback（深链不 404）
 # 打包传输：tar -czf counter-web-v2-dist.tar.gz .
 ```
 
-> ⚠️ 部署升级必须保持**同一域名/端口**（localStorage 按 origin 隔离）；打开前建议强刷一次（Ctrl+Shift+R）。
 
 详细构建指南请参考 [EAS_BUILD_GUIDE.md](./EAS_BUILD_GUIDE.md)。
