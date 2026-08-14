@@ -13,7 +13,7 @@ import { useApp } from '../src/state/app-context';
 const LAST_ROUTE_KEY = 'last_route';
 
 function RootNavigator() {
-  const { isDark, loading, counters } = useApp();
+  const { isDark, loading, counters, initialRoute } = useApp();
   const pathname = usePathname();
   // 首次渲染的路径：用于区分"深链进入"与"正常启动"
   const initialPathRef = useRef(pathname);
@@ -27,19 +27,17 @@ function RootNavigator() {
     }
   }, [pathname, loading]);
 
-  // 启动时恢复上次页面（数据加载完成后再跳，保证计数器已就绪）
+  // 启动时恢复上次页面。
+  // 用 AppProvider 启动时快照的 initialRoute（读取发生在任何写入之前，不受记录 effect 竞态影响）
   useEffect(() => {
     if (loading || restoredRef.current) return;
     restoredRef.current = true;
-    (async () => {
-      const last = await AsyncStorage.getItem(LAST_ROUTE_KEY);
-      const target = resolveRestoreRoute(last, initialPathRef.current, counters.map((c) => c.id));
-      if (target && target !== pathname) {
-        // push 而非 replace：保留返回栈，全屏页能正常返回首页
-        router.push(target as never);
-      }
-    })();
-  }, [loading, counters, pathname]);
+    const target = resolveRestoreRoute(initialRoute, initialPathRef.current, counters.map((c) => c.id));
+    if (target && target !== pathname) {
+      // push 而非 replace：保留返回栈，全屏页能正常返回首页
+      router.push(target as never);
+    }
+  }, [loading, counters, pathname, initialRoute]);
 
   return (
     <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>

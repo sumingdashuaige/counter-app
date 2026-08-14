@@ -15,6 +15,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(countersReducer, { counters: [] });
   const [loading, setLoading] = useState(true);
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
   const systemScheme = useColorScheme();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 标记是否正在卸载：防抖 effect 的 cleanup 借此区分"重渲染清理"与"卸载清理"
@@ -24,14 +25,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [rawTheme, rawCounters, legacyValue, legacyTitle, legacyHistory] = await Promise.all([
+        const [rawTheme, rawCounters, legacyValue, legacyTitle, legacyHistory, rawLastRoute] = await Promise.all([
           AsyncStorage.getItem(THEME_KEY),
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem(LEGACY_VALUE_KEY),
           AsyncStorage.getItem(LEGACY_TITLE_KEY),
           AsyncStorage.getItem(LEGACY_HISTORY_KEY),
+          AsyncStorage.getItem('last_route'),
         ]);
         setThemeModeState((rawTheme === 'light' || rawTheme === 'dark' ? rawTheme : 'system') as ThemeMode);
+        setInitialRoute(rawLastRoute);
 
         if (rawCounters !== null) {
           try {
@@ -135,11 +138,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loading,
       themeMode,
       isDark: resolveIsDark(themeMode, systemScheme),
+      initialRoute,
       dispatch,
       setThemeMode,
       flush,
     }),
-    [state.counters, loading, themeMode, systemScheme, setThemeMode, flush]
+    [state.counters, loading, themeMode, systemScheme, initialRoute, setThemeMode, flush]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

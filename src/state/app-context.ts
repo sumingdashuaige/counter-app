@@ -7,6 +7,8 @@ export interface AppState {
   loading: boolean;
   themeMode: ThemeMode;
   isDark: boolean;
+  /** 启动时从存储快照的上次页面（用于恢复，避免被路由记录写入竞态覆盖） */
+  initialRoute: string | null;
 }
 
 export interface AppApi {
