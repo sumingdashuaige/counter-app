@@ -45,16 +45,17 @@ metadata:
 eas build --platform android --profile preview
 ```
 
-## Web 版部署（2026-08-08 确定方案）
+## Web 版部署（v2，2026-08-14 更新）
 
 **目标环境**：Android 平板（arm64）+ Termux + proot Debian，公网通过 Cloudflare Tunnel 访问（用户已有域名，需托管在 Cloudflare）。
 
 **方案**：静态导出 + python3 起服务 + cloudflared 隧道。
-1. 构建：`npx expo export --platform web` → `dist/`（已生成，23 文件 2.2MB，index.html + entry JS）
-2. 传输：`dist/` 打 tar.gz 用 **TCP**（scp/nc）从电脑推到平板
-3. 起服务（Debian 内）：`python3 -m http.server 8080 --directory <dist路径>`（零安装；深链 /history 会 404，从首页进正常）
+1. 构建：`npx expo export --platform web` → `dist/`；打 `counter-web-v2-dist.tar.gz`
+2. 传输：tar.gz 用 **TCP**（scp/nc）从电脑推到平板
+3. 起服务（Debian 内）：`python3 serve.py 8080`（**带 SPA fallback，深链 /history、/counter/xxx 不再 404**）
 4. 公网：Debian 装 cloudflared(arm64)，隧道映射 `域名 → http://localhost:8080`，tmux 常驻
 
 **数据**：浏览器 localStorage（AsyncStorage web 实现），无后端。
+**升级注意**：必须保持**同一域名/端口**（origin 隔离），旧 v1 数据（counter_value/counter_title/counter_history）自动迁移且旧 key 保留；打开前强刷一次。
 
 **Why:** 快速了解项目结构、功能、技术栈，下次接手不用重新探索。
