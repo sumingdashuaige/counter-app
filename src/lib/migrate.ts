@@ -17,7 +17,7 @@ export function migrateLegacy(
   legacyTitle: string | null,
   legacyHistory: string | null
 ): CountersState | null {
-  if (legacyValue === null && legacyHistory === null) return null;
+  if (legacyValue === null && legacyHistory === null && legacyTitle === null) return null;
 
   const name = legacyTitle || '计数器';
   const now = Date.now();
