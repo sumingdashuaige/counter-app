@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Alert, FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { ToolbarButtons } from '../../src/components/toolbar-buttons';
 import { useApp } from '../../src/state/app-context';
 
 interface FlatRecord {
@@ -63,6 +64,8 @@ export default function HistoryScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <Text style={[styles.title, { color: text }]}>历史记录</Text>
+
+      <ToolbarButtons />
 
       <View style={[styles.warning, { backgroundColor: isDark ? '#332900' : '#fff3cd' }]}>
         <Text style={[styles.warningText, { color: isDark ? '#ffd60a' : '#856404' }]}>
