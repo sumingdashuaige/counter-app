@@ -1,226 +1,156 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import {
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { router } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useColorScheme } from '../../hooks/use-color-scheme';
+import { CounterCard } from '../../src/components/counter-card';
+import { NewCounterModal } from '../../src/components/new-counter-modal';
+import { createCounter } from '../../src/lib/reducer';
+import { useApp } from '../../src/state/app-context';
 
-const STORAGE_KEY = 'counter_value';
-const HISTORY_KEY = 'counter_history';
-const TITLE_KEY = 'counter_title';
+type ModalState =
+  | { kind: 'create' }
+  | { kind: 'edit'; id: string; name: string }
+  | null;
 
 export default function HomeScreen() {
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const theme = useColorScheme();
-  const [title, setTitle] = useState('计数器');
-  const [editing, setEditing] = useState(false);
-  const isDark = theme === 'dark';
+  const { counters, loading, isDark, dispatch } = useApp();
+  const [modal, setModal] = useState<ModalState>(null);
 
-  // 存放 setInterval 的返回值
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      (async () => {
-        try {
-          const saved = await AsyncStorage.getItem(STORAGE_KEY);
-          if (saved !== null) {
-            setCount(parseInt(saved, 10));
-          }
-
-          const savedTitle = await AsyncStorage.getItem(TITLE_KEY);
-          if (savedTitle !== null) {
-            setTitle(savedTitle);
-          }
-        } finally {
-          setLoading(false);
-        }
-      })();
-    }, [])
+  // 最近使用置顶（lastUsedAt 降序）
+  const sorted = useMemo(
+    () => [...counters].sort((a, b) => b.lastUsedAt - a.lastUsedAt),
+    [counters]
   );
 
-  const save = async (value: number) => {
-    setCount(value);
-    await AsyncStorage.setItem(STORAGE_KEY, value.toString());
-  };
+  const isEdit = modal !== null && modal.kind === 'edit';
 
-  // 清零并保存历史记录（count 为 0 时不记录）
-  const clearAndRecord = async () => {
-    if (count !== 0) {
-      const raw = await AsyncStorage.getItem(HISTORY_KEY);
-      const history = raw ? JSON.parse(raw) : [];
-      const record = {
-        id: Date.now().toString(),
-        count,
-        title,
-        time: new Date().toISOString(),
-      };
-      history.push(record);
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    }
-    save(0);
-  };
+  const openCounter = useCallback((id: string) => {
+    router.push(`/counter/${id}`);
+  }, []);
 
-  // 长按开始，启动定时器连续加减
-  const startLongPress = (delta: number) => {
-    // 立刻执行一次
-    setCount((prev) => {
-      const newCount = prev + delta;
-      AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
-      return newCount;
-    });
+  const onDelta = useCallback(
+    (id: string, delta: number) => {
+      dispatch({ type: 'updateValue', id, delta });
+    },
+    [dispatch]
+  );
 
-    // 清除残留的旧定时器
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-    }
+  // 长按菜单：重命名 / 复制 / 删除（删除二次确认）
+  const onLongPress = useCallback(
+    (id: string) => {
+      const c = counters.find((x) => x.id === id);
+      if (!c) return;
+      Alert.alert(c.name, '选择操作', [
+        {
+          text: '重命名',
+          onPress: () => setModal({ kind: 'edit', id: c.id, name: c.name }),
+        },
+        { text: '复制', onPress: () => dispatch({ type: 'duplicateCounter', id }) },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert('删除计数器', `确定删除「${c.name}」？此操作不可恢复。`, [
+              { text: '取消', style: 'cancel' },
+              {
+                text: '删除',
+                style: 'destructive',
+                onPress: () => dispatch({ type: 'removeCounter', id }),
+              },
+            ]),
+        },
+        { text: '取消', style: 'cancel' },
+      ]);
+    },
+    [counters, dispatch]
+  );
 
-    // 每 80ms 执行一次
-    intervalRef.current = setInterval(() => {
-      setCount((prev) => {
-        const newCount = prev + delta;
-        AsyncStorage.setItem(STORAGE_KEY, newCount.toString());
-        return newCount;
-      });
-    }, 80);
-  };
+  const handleConfirm = useCallback(
+    (name: string) => {
+      const n = name.trim();
+      if (!n) return;
+      if (isEdit) {
+        dispatch({ type: 'renameCounter', id: modal.id, name: n });
+      } else {
+        dispatch({ type: 'addCounter', counter: createCounter(n) });
+      }
+      setModal(null);
+    },
+    [isEdit, modal, dispatch]
+  );
 
-  // 松手时停止定时器
-  const handlePressOut = () => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <Text>加载中…</Text>
-      </SafeAreaView>
-    );
-  }
+  const bg = isDark ? '#111' : '#fff';
+  const text = isDark ? '#fff' : '#000';
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: isDark ? '#111' : '#fff' },
-      ]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
-      {editing ? (
-  <TextInput
-    style={[styles.title, { color: isDark ? '#fff' : '#000' }]}
-    value={title}
-    onChangeText={setTitle}
-    onBlur={() => {
-      AsyncStorage.setItem(TITLE_KEY, title);
-      setEditing(false);
-    }}
-    autoFocus
-  />
-) : (
-  <Text
-    style={[styles.title, { color: isDark ? '#fff' : '#000' }]}
-    onPress={() => setEditing(true)}
-  >
-    {title}
-  </Text>
-)}
-
-      <Text style={[styles.count, { color: isDark ? '#fff' : '#000' }]}>
-        {count}
-      </Text>
-
-      <View style={styles.row}>
-                {/* -1 — 支持长按快速减 */}
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: '#5856d6' }]}
-          onPress={() => save(count - 1)}
-          onLongPress={() => startLongPress(-1)}
-          onPressOut={handlePressOut}
-        >
-          <Text style={styles.btnText}>-1</Text>
-        </TouchableOpacity>
-
-        {/* +1 — 支持长按快速计数 */}
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => save(count + 1)}
-          onLongPress={() => startLongPress(1)}
-          onPressOut={handlePressOut}
-        >
-          <Text style={styles.btnText}>+1</Text>
-        </TouchableOpacity>
-
-        {/* 清零 */}
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: '#ff3b30' }]}
-          onPress={clearAndRecord}
-        >
-          <Text style={styles.btnText}>清零/保存</Text>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: text }]}>计数器</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setModal({ kind: 'create' })} activeOpacity={0.7}>
+          <Text style={styles.addText}>+ 新建</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.watermark, { color: isDark ? '#333' : '#ddd' }]}>
-        by：suming
-      </Text>
+      {loading ? (
+        <View style={styles.center}>
+          <Text style={{ color: text }}>加载中…</Text>
+        </View>
+      ) : sorted.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={[styles.emptyText, { color: isDark ? '#8e8e93' : '#aeaeb2' }]}>
+            还没有计数器，点右上角"新建"开始
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={sorted}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <CounterCard
+              counter={item}
+              isDark={isDark}
+              onPress={openCounter}
+              onLongPress={onLongPress}
+              onDelta={onDelta}
+            />
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
+
+      <NewCounterModal
+        visible={modal !== null}
+        title={isEdit ? '重命名计数器' : '新建计数器'}
+        initialName={isEdit ? modal.name : undefined}
+        isDark={isDark}
+        onCancel={() => setModal(null)}
+        onConfirm={handleConfirm}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  count: {
-    fontSize: 96,
-    fontWeight: 'bold',
-    marginBottom: 40,
-  },
-  row: {
+  container: { flex: 1 },
+  header: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  btn: {
+  title: { fontSize: 28, fontWeight: 'bold' },
+  addBtn: {
     backgroundColor: '#007aff',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 10,
   },
-  btnText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  watermark: {
-    position: 'absolute',
-    bottom: 16,
-    right: 24,
-    fontSize: 12,
-  },
+  addText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: 15 },
+  list: { padding: 6, paddingBottom: 24 },
 });
