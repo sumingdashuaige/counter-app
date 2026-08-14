@@ -45,12 +45,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
               if (valid.length > 0) {
                 dispatch({ type: 'importReplace', counters: valid });
               } else {
-                // 空数组（或过滤后为空）：也创建默认计数器（覆盖旧构建写入的空数组）
-                dispatch({ type: 'importReplace', counters: [createCounter('计数器')] });
+                // 空数组（或过滤后为空）：先尝试迁移旧数据（覆盖中间版本把空数组/占位写入 counters_v2 的情况），
+                // 无旧数据才创建默认计数器
+                const migrated = migrateLegacy(legacyValue, legacyTitle, legacyHistory);
+                dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
+                if (migrated) {
+                  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
+                }
               }
             } else {
-              // 非数组数据：走默认计数器
-              dispatch({ type: 'importReplace', counters: [createCounter('计数器')] });
+              // 非数组数据：清掉损坏 key 后走迁移，无旧数据则默认计数器
+              await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+              const migrated = migrateLegacy(legacyValue, legacyTitle, legacyHistory);
+              dispatch({ type: 'importReplace', counters: migrated?.counters ?? [createCounter('计数器')] });
+              if (migrated) {
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.counters));
+              }
             }
           } catch {
             // 数据损坏：清掉损坏的 key，再尝试迁移旧数据；迁移失败则创建默认计数器

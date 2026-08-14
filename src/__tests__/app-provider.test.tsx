@@ -55,6 +55,16 @@ test('迁移：有旧版三个 key 时生成计数器并保留旧 key', async ()
   expect(await AsyncStorage.getItem(LEGACY_TITLE_KEY)).toBe('我的计数');
 });
 
+test('迁移：counters_v2 为空数组但旧 key 存在时，旧数据优先', async () => {
+  await AsyncStorage.setItem(STORAGE_KEY, '[]');
+  await AsyncStorage.setItem(LEGACY_VALUE_KEY, '66');
+  await AsyncStorage.setItem(LEGACY_TITLE_KEY, '旧计数');
+  const { getByText } = await renderApp();
+  await waitFor(() => {
+    getByText('[{"name":"旧计数","value":66,"history":0}]');
+  });
+});
+
 test('迁移：无任何数据时创建默认计数器', async () => {
   const { getByText } = await renderApp();
   await waitFor(() => {
