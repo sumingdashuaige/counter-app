@@ -9,7 +9,7 @@ export function serializeExport(counters: Counter[]): string {
   return JSON.stringify(file);
 }
 
-function isCounter(x: unknown): x is Counter {
+export function isCounter(x: unknown): x is Counter {
   if (typeof x !== 'object' || x === null) return false;
   const c = x as Record<string, unknown>;
   return (
